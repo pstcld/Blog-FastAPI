@@ -1,9 +1,5 @@
 from fastapi import FastAPI
 from src.api import categories, comments, locations, posts, users
-from src.infrastructure.database import engine
-from src.infrastructure import models
-
-models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Blog FastAPI")
 
