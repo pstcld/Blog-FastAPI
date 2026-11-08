@@ -1,0 +1,26 @@
+# Виртуальное окружение
+venv/
+env/
+.venv/
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Локальная база данных SQLite
+*.db
+*.sqlite3
+
+# Переменные окружения
+.env
+.env.*
+
+# Кэш тестов и линтеров
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Настройки редакторов кода (VS Code, PyCharm)
+.vscode/
+.idea/
