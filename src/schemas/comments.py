@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from .user import UserResponse
+from .users import UserResponse
 
 
 class CommentBase(BaseModel):

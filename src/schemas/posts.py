@@ -2,7 +2,7 @@ from pydantic import Field
 from datetime import datetime
 from typing import Optional
 from .common import PublishedCreatedBase
-from .user import UserResponse
+from .users import UserResponse
 
 
 class PostBase(PublishedCreatedBase):
