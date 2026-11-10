@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 
 class PublishedCreatedBase(BaseModel):

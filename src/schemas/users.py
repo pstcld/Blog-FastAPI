@@ -20,6 +20,10 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=4)
 
 
+class UserCreateDB(UserBase):
+    hashed_password: str
+
+
 class UserResponse(UserBase, BaseResponse):
     is_admin: bool
 

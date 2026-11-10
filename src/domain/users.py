@@ -39,12 +39,26 @@ class UserUseCase:
 
     @staticmethod
     def create(db: Session, user: schemas.UserCreate):
-        user_data = user.model_dump()
-        password = user_data.pop("password")
-        user_data["hashed_password"] = get_password_hash(password)
+        hashed_pw = get_password_hash(user.password)
+
+        user_db_data = schemas.UserCreateDB(
+            username=user.username,
+            email=user.email,
+            hashed_password=hashed_pw,
+            is_admin=False
+        )
 
         try:
-            return UserRepository.create(db, user_data)
+            return UserRepository.create(db, user_db_data)
+        except RecordAlreadyExistsError:
+            raise EntityAlreadyExistsError(
+                message="Пользователь с таким именем или email уже существует.",
+                details={
+                    "action": "create_user",
+                    "username": user.username,
+                    "email": user.email,
+                },
+            )
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Пользователь с таким именем или email уже существует.",

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def create_default_admin():
     db: Session = SessionLocal()
     try:
-        admin_exists = db.query(User).filter(User.is_admin == True).first()
+        admin_exists = db.query(User).filter(User.is_admin.is_(True)).first()
         if not admin_exists:
             admin_user = User(
                 username=settings.admin_username,
