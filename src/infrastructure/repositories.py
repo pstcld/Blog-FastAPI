@@ -34,8 +34,8 @@ class UserRepository:
         return db_user
 
     @staticmethod
-    def create(db: Session, user: user_schemas.UserCreate):
-        db_user = models.User(**user.model_dump())
+    def create(db: Session, user_data: dict):
+        db_user = models.User(**user_data)
         db.add(db_user)
         try:
             db.commit()

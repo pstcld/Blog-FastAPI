@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from src.infrastructure.database import get_db
 from src.schemas import locations as schemas
+from src.api.dependencies import get_current_admin_user, get_current_user
+from src.schemas import users as user_schemas
 from src.domain.locations import LocationUseCase
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
@@ -31,7 +33,11 @@ def get_location(location_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/", response_model=schemas.LocationResponse, status_code=status.HTTP_201_CREATED
 )
-def create_location(location: schemas.LocationCreate, db: Session = Depends(get_db)):
+def create_location(
+    location: schemas.LocationCreate,
+    db: Session = Depends(get_db),
+    current_admin: user_schemas.UserResponse = Depends(get_current_user),
+):
     try:
         return LocationUseCase.create(db, location)
     except EntityAlreadyExistsError as e:
@@ -46,6 +52,7 @@ def update_location(
     location_id: int,
     location_update: schemas.LocationUpdate,
     db: Session = Depends(get_db),
+    current_admin: user_schemas.UserResponse = Depends(get_current_admin_user),
 ):
     try:
         return LocationUseCase.update(db, location_id, location_update)
@@ -62,7 +69,11 @@ def update_location(
 
 
 @router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_location(location_id: int, db: Session = Depends(get_db)):
+def delete_location(
+    location_id: int,
+    db: Session = Depends(get_db),
+    current_admin: user_schemas.UserResponse = Depends(get_current_admin_user),
+):
     try:
         LocationUseCase.delete(db, location_id)
     except EntityNotFoundError as e:

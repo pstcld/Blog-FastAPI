@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from src.infrastructure.database import get_db
 from src.schemas import categories as schemas
+from src.api.dependencies import get_current_admin_user, get_current_user
+from src.schemas import users as user_schemas
 from src.domain.categories import CategoryUseCase
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
@@ -31,7 +33,11 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/", response_model=schemas.CategoryResponse, status_code=status.HTTP_201_CREATED
 )
-def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+def create_category(
+    category: schemas.CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
+):
     try:
         return CategoryUseCase.create(db, category)
     except EntityAlreadyExistsError as e:
@@ -46,6 +52,7 @@ def update_category(
     category_id: int,
     category_update: schemas.CategoryUpdate,
     db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_admin_user),
 ):
     try:
         return CategoryUseCase.update(db, category_id, category_update)
@@ -62,7 +69,11 @@ def update_category(
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_category(category_id: int, db: Session = Depends(get_db)):
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_admin_user),
+):
     try:
         CategoryUseCase.delete(db, category_id)
     except EntityNotFoundError as e:

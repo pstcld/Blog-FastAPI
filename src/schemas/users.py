@@ -21,4 +21,9 @@ class UserCreate(UserBase):
 
 
 class UserResponse(UserBase, BaseResponse):
-    pass
+    is_admin: bool
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

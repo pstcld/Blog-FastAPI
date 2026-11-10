@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import datetime
+from typing import Optional
 from .users import UserResponse
 
 
@@ -16,12 +17,26 @@ class CommentBase(BaseModel):
 
 
 class CommentCreate(CommentBase):
-    author_id: int
+    author_id: Optional[int] = Field(default=None, exclude=True)
     post_id: int
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "text": "string",
+            }
+        }
+    )
 
 
 class CommentUpdate(CommentBase):
-    pass
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "text": "string",
+            }
+        }
+    )
 
 
 class CommentResponse(CommentBase):

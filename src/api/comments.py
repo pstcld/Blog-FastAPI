@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from src.infrastructure.database import get_db
 from src.schemas import comments as schemas
+from src.api.dependencies import get_current_user
+from src.schemas import users as user_schemas
 from src.domain.comments import CommentUseCase
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
@@ -31,8 +33,13 @@ def get_comment(comment_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/", response_model=schemas.CommentResponse, status_code=status.HTTP_201_CREATED
 )
-def create_comment(comment: schemas.CommentCreate, db: Session = Depends(get_db)):
+def create_comment(
+    comment: schemas.CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
+):
     try:
+        comment.author_id = current_user.id
         return CommentUseCase.create(db, comment)
     except EntityAlreadyExistsError as e:
         raise HTTPException(
@@ -46,8 +53,15 @@ def update_comment(
     comment_id: int,
     comment_update: schemas.CommentUpdate,
     db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
 ):
     try:
+        comment = CommentUseCase.get_by_id(db, comment_id)
+        if comment.author_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Вы не можете редактировать чужой комментарий",
+            )
         return CommentUseCase.update(db, comment_id, comment_update)
     except EntityNotFoundError as e:
         raise HTTPException(
@@ -62,8 +76,18 @@ def update_comment(
 
 
 @router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_comment(comment_id: int, db: Session = Depends(get_db)):
+def delete_comment(
+    comment_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
+):
     try:
+        comment = CommentUseCase.get_by_id(db, comment_id)
+        if comment.author_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Вы не можете удалить чужой комментарий",
+            )
         CommentUseCase.delete(db, comment_id)
     except EntityNotFoundError as e:
         raise HTTPException(

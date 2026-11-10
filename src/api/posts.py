@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from src.infrastructure.database import get_db
 from src.schemas import posts as schemas
+from src.api.dependencies import get_current_user
+from src.schemas import users as user_schemas
 from src.domain.posts import PostUseCase
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
@@ -31,8 +33,13 @@ def get_post(post_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/", response_model=schemas.PostResponse, status_code=status.HTTP_201_CREATED
 )
-def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
+def create_post(
+    post: schemas.PostCreate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
+):
     try:
+        post.author_id = current_user.id
         return PostUseCase.create(db, post)
     except EntityAlreadyExistsError as e:
         raise HTTPException(
@@ -43,9 +50,18 @@ def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
 
 @router.put("/{post_id}", response_model=schemas.PostResponse)
 def update_post(
-    post_id: int, post_update: schemas.PostUpdate, db: Session = Depends(get_db)
+    post_id: int,
+    post_update: schemas.PostUpdate,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
 ):
     try:
+        post = PostUseCase.get_by_id(db, post_id)
+        if post.author_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="У вас нет прав на редактирование чужого поста",
+            )
         return PostUseCase.update(db, post_id, post_update)
     except EntityNotFoundError as e:
         raise HTTPException(
@@ -60,8 +76,18 @@ def update_post(
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(post_id: int, db: Session = Depends(get_db)):
+def delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    current_user: user_schemas.UserResponse = Depends(get_current_user),
+):
     try:
+        post = PostUseCase.get_by_id(db, post_id)
+        if post.author_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="У вас нет прав на удаление чужого поста",
+            )
         PostUseCase.delete(db, post_id)
     except EntityNotFoundError as e:
         raise HTTPException(

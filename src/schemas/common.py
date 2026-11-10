@@ -1,10 +1,17 @@
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime, timezone
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from datetime import datetime, timezone, timedelta
 
 
 class PublishedCreatedBase(BaseModel):
     is_published: bool = True
     created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
 
 
 class BaseResponse(BaseModel):

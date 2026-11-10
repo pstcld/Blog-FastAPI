@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from src.schemas import users as schemas
 from src.infrastructure.repositories import UserRepository
+from src.core.security import get_password_hash, verify_password
 from src.core.exceptions.database_exceptions import (
     RecordAlreadyExistsError,
     RecordNotFoundError,
@@ -38,8 +39,12 @@ class UserUseCase:
 
     @staticmethod
     def create(db: Session, user: schemas.UserCreate):
+        user_data = user.model_dump()
+        password = user_data.pop("password")
+        user_data["hashed_password"] = get_password_hash(password)
+
         try:
-            return UserRepository.create(db, user)
+            return UserRepository.create(db, user_data)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Пользователь с таким именем или email уже существует.",
@@ -49,3 +54,15 @@ class UserUseCase:
                     "email": user.email,
                 },
             )
+
+    @staticmethod
+    def authenticate_user(db: Session, username: str, password: str):
+        try:
+            user = UserRepository.get_by_username(db, username)
+        except RecordNotFoundError:
+            return None
+
+        if not verify_password(password, user.hashed_password):
+            return None
+
+        return user

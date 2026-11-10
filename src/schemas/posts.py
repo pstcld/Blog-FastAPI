@@ -15,18 +15,58 @@ class PostBase(PublishedCreatedBase):
     @field_validator("pub_date")
     @classmethod
     def validate_pub_date(cls, value: datetime) -> datetime:
-        if value < datetime.now(timezone.utc) - timedelta(minutes=5):
-            raise ValueError("Дата публикации не может быть в прошлом")
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
         return value
 
 
 class PostCreate(PostBase):
-    author_id: int
+    author_id: Optional[int] = Field(default=None, exclude=True)
     image: Optional[str] = None
+
+    @field_validator("created_at", "pub_date")
+    @classmethod
+    def validate_dates_not_in_past(cls, value: datetime) -> datetime:
+        if value < datetime.now(timezone.utc) - timedelta(minutes=5):
+            raise ValueError("Дата публикации/создания не может быть в прошлом")
+        return value
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "string",
+                "text": "string",
+                "is_published": True,
+            }
+        }
+    )
 
 
 class PostUpdate(PostBase):
     image: Optional[str] = None
+    created_at: Optional[datetime] = None
+    pub_date: Optional[datetime] = Field(default=None, exclude=True)
+
+    @field_validator("pub_date")
+    @classmethod
+    def validate_pub_date_update(cls, value: Optional[datetime]) -> Optional[datetime]:
+        if value is None:
+            return value
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        if value < datetime.now(timezone.utc) - timedelta(minutes=5):
+            raise ValueError("Новая дата публикации не может быть в прошлом")
+        return value
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "string",
+                "text": "string",
+                "is_published": True,
+            }
+        }
+    )
 
 
 class PostResponse(PostBase):
