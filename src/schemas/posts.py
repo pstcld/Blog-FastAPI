@@ -8,7 +8,7 @@ from .users import UserResponse
 class PostBase(PublishedCreatedBase):
     title: str = Field(..., max_length=256)
     text: str
-    pub_date: datetime
+    pub_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     location_id: Optional[int] = None
     category_id: Optional[int] = None
 
@@ -21,14 +21,21 @@ class PostBase(PublishedCreatedBase):
 
 
 class PostCreate(PostBase):
-    author_id: Optional[int] = Field(default=None, exclude=True)
+    author_id: Optional[int] = Field(default=None)
     image: Optional[str] = None
 
-    @field_validator("created_at", "pub_date")
+    @field_validator("created_at")
     @classmethod
-    def validate_dates_not_in_past(cls, value: datetime) -> datetime:
+    def validate_created_at(cls, value: datetime) -> datetime:
         if value < datetime.now(timezone.utc) - timedelta(minutes=5):
-            raise ValueError("Дата публикации/создания не может быть в прошлом")
+            raise ValueError("Дата создания не может быть в прошлом")
+        return value
+
+    @field_validator("pub_date")
+    @classmethod
+    def validate_pub_date(cls, value: datetime) -> datetime:
+        if value < datetime.now(timezone.utc) - timedelta(minutes=5):
+            raise ValueError("Дата публикации не может быть в прошлом")
         return value
 
     model_config = ConfigDict(

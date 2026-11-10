@@ -183,6 +183,15 @@ class PostRepository:
         db.delete(db_post)
         db.commit()
 
+    @staticmethod
+    def update_image(db: Session, post_id: int, image_url: str):
+        post = db.query(models.Post).filter(models.Post.id == post_id).first()
+        if post:
+            post.image = image_url
+            db.commit()
+            db.refresh(post)
+        return post
+
 
 class CommentRepository:
     @staticmethod

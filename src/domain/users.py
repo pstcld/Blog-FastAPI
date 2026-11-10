@@ -45,7 +45,7 @@ class UserUseCase:
             username=user.username,
             email=user.email,
             hashed_password=hashed_pw,
-            is_admin=False
+            is_admin=False,
         )
 
         try:

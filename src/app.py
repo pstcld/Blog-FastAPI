@@ -1,11 +1,14 @@
 import logging
 from fastapi import FastAPI, Request
 from src.api import categories, comments, locations, posts, users
+from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Blog FastAPI")
+
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 
 @app.middleware("http")

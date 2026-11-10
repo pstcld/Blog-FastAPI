@@ -9,6 +9,10 @@ from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
 )
+import os
+import shutil
+import uuid
+from fastapi import UploadFile, HTTPException
 
 
 class PostUseCase:
@@ -64,3 +68,22 @@ class PostUseCase:
                 message="Публикация для удаления не найдена.",
                 details={"action": "delete_post", "post_id": post_id},
             )
+
+    @staticmethod
+    def upload_image(db, post_id: int, file: UploadFile, current_user_id: int):
+        post = PostRepository.get_by_id(db, post_id)
+        if not post:
+            raise HTTPException(status_code=404, detail="Пост не найден")
+        if post.author_id != current_user_id:
+            raise HTTPException(
+                status_code=403, detail="Нет прав на изменение этого поста"
+            )
+        file_extension = file.filename.split(".")[-1]
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = f"media/{unique_filename}"
+        os.makedirs("media", exist_ok=True)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        image_url = f"/{file_path}"
+        updated_post = PostRepository.update_image(db, post_id, image_url)
+        return updated_post

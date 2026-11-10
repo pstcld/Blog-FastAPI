@@ -8,10 +8,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Локальная база данных SQLite
-*.db
-*.sqlite3
-
 # Переменные окружения
 .env
 
@@ -23,3 +19,6 @@ __pycache__/
 # Настройки редакторов кода (VS Code, PyCharm)
 .vscode/
 .idea/
+
+# Папка с изображениями
+media/

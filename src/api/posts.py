@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from src.infrastructure.database import get_db
@@ -6,6 +6,8 @@ from src.schemas import posts as schemas
 from src.api.dependencies import get_current_user
 from src.schemas import users as user_schemas
 from src.domain.posts import PostUseCase
+from fastapi.responses import FileResponse
+import os
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
@@ -94,3 +96,31 @@ def delete_post(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": e.message, "context": e.details},
         )
+
+
+@router.post("/{post_id}/image", response_model=schemas.PostResponse)
+def upload_post_image(
+    post_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return PostUseCase.upload_image(
+        db=db, post_id=post_id, file=file, current_user_id=current_user.id
+    )
+
+
+@router.get("/{post_id}/image", response_class=FileResponse)
+def get_post_image_by_id(post_id: int, db: Session = Depends(get_db)):
+    try:
+        post = PostUseCase.get_by_id(db, post_id)
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Пост не найден")
+    if not post.image:
+        raise HTTPException(status_code=404, detail="У этого поста нет изображения")
+    file_path = post.image.lstrip("/")
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404, detail="Изображение отсутствует на сервере"
+        )
+    return FileResponse(path=file_path)

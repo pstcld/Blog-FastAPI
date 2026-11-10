@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 class PublishedCreatedBase(BaseModel):
     is_published: bool = True
-    created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator("created_at")
     @classmethod
