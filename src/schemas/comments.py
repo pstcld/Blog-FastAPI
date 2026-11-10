@@ -1,10 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import datetime
 from .users import UserResponse
 
 
 class CommentBase(BaseModel):
     text: str
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Комментарий не может быть пустым")
+        return cleaned
 
 
 class CommentCreate(CommentBase):
@@ -23,5 +31,4 @@ class CommentResponse(CommentBase):
     post_id: int
     author: UserResponse
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

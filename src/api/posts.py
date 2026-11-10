@@ -1,47 +1,70 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-
-from src.schemas import posts as schemas
 from src.infrastructure.database import get_db
-from src.infrastructure.repositories import PostRepository
+from src.schemas import posts as schemas
+from src.domain.posts import PostUseCase
+from src.core.exceptions.domain_exceptions import (
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+)
 
 router = APIRouter()
+
+
+@router.get("/", response_model=List[schemas.PostResponse])
+def get_posts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return PostUseCase.get_all(db, skip=skip, limit=limit)
+
+
+@router.get("/{post_id}", response_model=schemas.PostResponse)
+def get_post(post_id: int, db: Session = Depends(get_db)):
+    try:
+        return PostUseCase.get_by_id(db, post_id)
+    except EntityNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": e.message, "context": e.details},
+        )
 
 
 @router.post(
     "/", response_model=schemas.PostResponse, status_code=status.HTTP_201_CREATED
 )
 def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
-    return PostRepository.create(db=db, post=post)
-
-
-@router.get("/", response_model=List[schemas.PostResponse])
-def read_posts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return PostRepository.get_all(db, skip=skip, limit=limit)
-
-
-@router.get("/{post_id}", response_model=schemas.PostResponse)
-def read_post(post_id: int, db: Session = Depends(get_db)):
-    post = PostRepository.get_by_id(db, post_id)
-    if post is None:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return post
+    try:
+        return PostUseCase.create(db, post)
+    except EntityAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": e.message, "context": e.details},
+        )
 
 
 @router.put("/{post_id}", response_model=schemas.PostResponse)
 def update_post(
     post_id: int, post_update: schemas.PostUpdate, db: Session = Depends(get_db)
 ):
-    db_post = PostRepository.get_by_id(db, post_id)
-    if db_post is None:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return PostRepository.update(db, db_post, post_update)
+    try:
+        return PostUseCase.update(db, post_id, post_update)
+    except EntityNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": e.message, "context": e.details},
+        )
+    except EntityAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": e.message, "context": e.details},
+        )
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(post_id: int, db: Session = Depends(get_db)):
-    db_post = PostRepository.get_by_id(db, post_id)
-    if db_post is None:
-        raise HTTPException(status_code=404, detail="Post not found")
-    PostRepository.delete(db, db_post)
+    try:
+        PostUseCase.delete(db, post_id)
+    except EntityNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": e.message, "context": e.details},
+        )

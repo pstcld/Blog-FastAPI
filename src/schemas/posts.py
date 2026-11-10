@@ -1,5 +1,5 @@
-from pydantic import Field
-from datetime import datetime
+from pydantic import Field, ConfigDict, field_validator
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from .common import PublishedCreatedBase
 from .users import UserResponse
@@ -11,6 +11,13 @@ class PostBase(PublishedCreatedBase):
     pub_date: datetime
     location_id: Optional[int] = None
     category_id: Optional[int] = None
+
+    @field_validator("pub_date")
+    @classmethod
+    def validate_pub_date(cls, value: datetime) -> datetime:
+        if value < datetime.now(timezone.utc) - timedelta(minutes=5):
+            raise ValueError("Дата публикации не может быть в прошлом")
+        return value
 
 
 class PostCreate(PostBase):
@@ -28,5 +35,4 @@ class PostResponse(PostBase):
     author: UserResponse
     image: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
