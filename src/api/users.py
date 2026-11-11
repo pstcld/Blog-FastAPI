@@ -3,8 +3,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
 from src.infrastructure.database import get_db
+from src.api.dependencies import get_current_user
 from src.schemas import users as schemas
+from src.schemas import posts as post_schemas
 from src.domain.users import UserUseCase
+from src.domain.posts import PostUseCase
+from src.domain.likes import LikeUseCase
 from src.core.security import create_access_token
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
@@ -12,6 +16,13 @@ from src.core.exceptions.domain_exceptions import (
 )
 
 router = APIRouter()
+
+
+@router.get("/me", response_model=schemas.UserResponse)
+def get_current_user_profile(
+    current_user: schemas.UserResponse = Depends(get_current_user),
+):
+    return current_user
 
 
 @router.post("/login", response_model=schemas.Token)
@@ -57,3 +68,23 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": e.message, "context": e.details},
         )
+
+
+@router.get("/{user_id}/posts", response_model=List[post_schemas.PostResponse])
+def get_user_posts(
+    user_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+):
+    try:
+        return PostUseCase.get_by_author_id(
+            db, author_id=user_id, skip=skip, limit=limit
+        )
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/{user_id}/likes/posts", response_model=List[post_schemas.PostResponse])
+def get_user_liked_posts(user_id: int, db: Session = Depends(get_db)):
+    try:
+        return LikeUseCase.get_user_liked_posts(db, user_id)
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from src.infrastructure import models
-
+from typing import Optional
 from src.schemas import users as user_schemas
 from src.schemas import categories as category_schemas
 from src.schemas import locations as location_schemas
@@ -144,8 +144,34 @@ class LocationRepository:
 
 class PostRepository:
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return db.query(models.Post).offset(skip).limit(limit).all()
+    def get_all(
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        category_id: Optional[int] = None,
+        location_id: Optional[int] = None,
+    ):
+        query = db.query(models.Post)
+        if category_id is not None:
+            query = query.filter(models.Post.category_id == category_id)
+        if location_id is not None:
+            query = query.filter(models.Post.location_id == location_id)
+        return (
+            query.order_by(models.Post.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def get_by_author_id(db: Session, author_id: int, skip: int = 0, limit: int = 100):
+        return (
+            db.query(models.Post)
+            .filter(models.Post.author_id == author_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     @staticmethod
     def get_by_id(db: Session, post_id: int):
@@ -168,8 +194,11 @@ class PostRepository:
 
     @staticmethod
     def update(db: Session, db_post: models.Post, post_update: post_schemas.PostUpdate):
-        for key, value in post_update.model_dump().items():
+        update_data = post_update.model_dump(exclude_unset=True)
+
+        for key, value in update_data.items():
             setattr(db_post, key, value)
+
         try:
             db.commit()
             db.refresh(db_post)
@@ -184,7 +213,7 @@ class PostRepository:
         db.commit()
 
     @staticmethod
-    def update_image(db: Session, post_id: int, image_url: str):
+    def update_image(db: Session, post_id: int, image_url: Optional[str]):
         post = db.query(models.Post).filter(models.Post.id == post_id).first()
         if post:
             post.image = image_url
@@ -219,7 +248,10 @@ class CommentRepository:
 
     @staticmethod
     def create(db: Session, comment: comment_schemas.CommentCreate):
-        db_comment = models.Comment(**comment.model_dump())
+        comment_data = comment.model_dump()
+        comment_data["author_id"] = comment.author_id
+        comment_data["post_id"] = comment.post_id
+        db_comment = models.Comment(**comment_data)
         db.add(db_comment)
         try:
             db.commit()

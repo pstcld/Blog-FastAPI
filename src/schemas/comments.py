@@ -18,7 +18,7 @@ class CommentBase(BaseModel):
 
 class CommentCreate(CommentBase):
     author_id: Optional[int] = Field(default=None, exclude=True)
-    post_id: int
+    post_id: Optional[int] = Field(default=None, exclude=True)
 
     model_config = ConfigDict(
         json_schema_extra={

@@ -29,7 +29,9 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./media:/app/media
+      - media_data:/app/media
+      - ./static:/app/static
 
 volumes:
   postgres_data:
+  media_data:

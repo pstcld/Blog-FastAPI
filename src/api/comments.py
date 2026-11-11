@@ -6,17 +6,13 @@ from src.schemas import comments as schemas
 from src.api.dependencies import get_current_user
 from src.schemas import users as user_schemas
 from src.domain.comments import CommentUseCase
+from src.domain.likes import LikeUseCase
 from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
 )
 
 router = APIRouter()
-
-
-@router.get("/", response_model=List[schemas.CommentResponse])
-def get_comments(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return CommentUseCase.get_all(db, skip=skip, limit=limit)
 
 
 @router.get("/{comment_id}", response_model=schemas.CommentResponse)
@@ -26,24 +22,6 @@ def get_comment(comment_id: int, db: Session = Depends(get_db)):
     except EntityNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": e.message, "context": e.details},
-        )
-
-
-@router.post(
-    "/", response_model=schemas.CommentResponse, status_code=status.HTTP_201_CREATED
-)
-def create_comment(
-    comment: schemas.CommentCreate,
-    db: Session = Depends(get_db),
-    current_user: user_schemas.UserResponse = Depends(get_current_user),
-):
-    try:
-        comment.author_id = current_user.id
-        return CommentUseCase.create(db, comment)
-    except EntityAlreadyExistsError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": e.message, "context": e.details},
         )
 
@@ -94,3 +72,22 @@ def delete_comment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": e.message, "context": e.details},
         )
+
+
+@router.post("/{comment_id}/like", status_code=status.HTTP_200_OK)
+def toggle_comment_like(
+    comment_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return LikeUseCase.toggle_like(
+        db=db, user_id=current_user.id, comment_id=comment_id
+    )
+
+
+@router.get("/{comment_id}/likes", response_model=List[user_schemas.UserResponse])
+def get_comment_likers(comment_id: int, db: Session = Depends(get_db)):
+    try:
+        return LikeUseCase.get_comment_likers(db, comment_id)
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

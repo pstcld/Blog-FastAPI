@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog FastAPI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="container nav-content">
+            <div class="nav-left">
+                <span class="logo" onclick="showAllFeed()">Blog FastAPI</span>
+                <a href="/docs" target="_blank" class="docs-link">Swagger UI ↗</a>
+            </div>
+
+            <!-- Навигация для гостя -->
+            <div id="guest-nav" class="nav-right">
+                <button class="btn btn-outline" onclick="openModal('login-modal')">Войти</button>
+                <button class="btn btn-primary" onclick="openModal('register-modal')">Регистрация</button>
+            </div>
+
+            <!-- Навигация для авторизованного пользователя -->
+            <div id="user-nav" class="nav-right hidden">
+                <button class="btn btn-primary" onclick="openPostModal()">+ Новый пост</button>
+                <div class="user-info">
+                    <span id="nav-username" class="username user-link" onclick="openMyProfile()" title="Перейти в мой профиль"></span>
+                    <span id="nav-admin-badge" class="badge badge-admin hidden">Admin</span>
+                    <button class="btn-link btn-danger" onclick="logout()">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container main-layout">
+        <!-- Левая колонка: фильтры и справочники -->
+        <aside class="sidebar">
+            <div class="card" id="filters-card">
+                <div class="card-header">
+                    <h3>Фильтры ленты</h3>
+                    <button class="btn-link" onclick="showAllFeed()">Сбросить</button>
+                </div>
+                <div class="form-group">
+                    <label for="filter-category">Категория</label>
+                    <select id="filter-category" onchange="onFilterChange()">
+                        <option value="">Все категории</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter-location">Локация</label>
+                    <select id="filter-location" onchange="onFilterChange()">
+                        <option value="">Все локации</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Панель добавления категорий и локаций -->
+            <div id="taxonomy-panel" class="card hidden">
+                <h3>Справочники</h3>
+                <form onsubmit="createCategory(event)" class="mini-form">
+                    <input type="text" id="new-cat-title" placeholder="Название категории" required>
+                    <input type="text" id="new-cat-slug" placeholder="Slug (напр. news)" required>
+                    <button type="submit" class="btn btn-secondary btn-full">+ Категория</button>
+                </form>
+                <hr>
+                <form onsubmit="createLocation(event)" class="mini-form">
+                    <input type="text" id="new-loc-name" placeholder="Название локации" required>
+                    <button type="submit" class="btn btn-secondary btn-full">+ Локация</button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Правая колонка: профиль пользователя + лента постов -->
+        <section class="feed">
+            <!-- Шапка профиля пользователя (показывается при переходе на страницу юзера) -->
+            <div id="profile-header" class="card profile-banner hidden">
+                <div class="profile-top">
+                    <div>
+                        <h2 id="profile-username" class="profile-title">@username</h2>
+                        <div id="profile-email" class="profile-subtitle"></div>
+                    </div>
+                    <button class="btn btn-outline" onclick="showAllFeed()">← Ко всем постам</button>
+                </div>
+                <div class="profile-tabs">
+                    <button id="tab-user-posts" class="tab-btn active" onclick="switchProfileTab('posts')">Публикации пользователя</button>
+                    <button id="tab-user-likes" class="tab-btn" onclick="switchProfileTab('likes')">Понравившиеся посты</button>
+                </div>
+            </div>
+
+            <div id="posts-container">
+                <div class="empty-state">Загрузка публикаций...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Модальное окно: Список лайкнувших -->
+    <div id="likers-modal" class="modal-overlay hidden">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3 id="likers-modal-title">Оценили</h3>
+                <button class="close-btn" onclick="closeModal('likers-modal')">&times;</button>
+            </div>
+            <div id="likers-list" class="likers-list"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Вход -->
+    <div id="login-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Вход в аккаунт</h3>
+                <button class="close-btn" onclick="closeModal('login-modal')">&times;</button>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <input type="text" id="login-username" placeholder="Имя пользователя" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" placeholder="Пароль" required>
+                </div>
+                <div id="login-error" class="error-msg hidden"></div>
+                <button type="submit" class="btn btn-primary btn-full">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Регистрация -->
+    <div id="register-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Регистрация</h3>
+                <button class="close-btn" onclick="closeModal('register-modal')">&times;</button>
+            </div>
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <input type="text" id="reg-username" placeholder="Имя пользователя" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="reg-email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="reg-password" placeholder="Пароль (мин. 4 символа)" minlength="4" required>
+                </div>
+                <div id="reg-error" class="error-msg hidden"></div>
+                <button type="submit" class="btn btn-primary btn-full">Создать аккаунт</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Пост (Создание / Редактирование) -->
+    <div id="post-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="post-modal-title">Новый пост</h3>
+                <button class="close-btn" onclick="closeModal('post-modal')">&times;</button>
+            </div>
+            <form onsubmit="handleSavePost(event)">
+                <input type="hidden" id="post-id">
+                <div class="form-group">
+                    <input type="text" id="post-title" placeholder="Заголовок поста" maxlength="256" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="post-text" rows="5" placeholder="Текст публикации..." required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="post-category">Категория</label>
+                        <select id="post-category"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="post-location">Локация</label>
+                        <select id="post-location"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="post-image-file">Изображение</label>
+                    <input type="file" id="post-image-file" accept="image/*">
+                </div>
+                <div id="post-error" class="error-msg hidden"></div>
+                <button type="submit" class="btn btn-primary btn-full">Сохранить</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

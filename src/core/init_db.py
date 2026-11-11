@@ -4,6 +4,8 @@ from src.infrastructure.database import SessionLocal
 from src.infrastructure.models import User
 from src.core.security import get_password_hash
 from src.core.config import settings
+import os
+import shutil
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

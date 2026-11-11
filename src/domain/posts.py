@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from src.schemas import posts as schemas
-from src.infrastructure.repositories import PostRepository
+from src.infrastructure.repositories import PostRepository, UserRepository
 from src.core.exceptions.database_exceptions import (
     RecordAlreadyExistsError,
     RecordNotFoundError,
@@ -12,13 +12,33 @@ from src.core.exceptions.domain_exceptions import (
 import os
 import shutil
 import uuid
-from fastapi import UploadFile, HTTPException
+from fastapi import UploadFile
+from typing import Optional
 
 
 class PostUseCase:
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return PostRepository.get_all(db, skip, limit)
+    def get_all(
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        category_id: Optional[int] = None,
+        location_id: Optional[int] = None,
+    ):
+        return PostRepository.get_all(
+            db, skip=skip, limit=limit, category_id=category_id, location_id=location_id
+        )
+
+    @staticmethod
+    def get_by_author_id(db: Session, author_id: int, skip: int = 0, limit: int = 100):
+        try:
+            UserRepository.get_by_id(db, author_id)
+        except RecordNotFoundError:
+            raise EntityNotFoundError(
+                message="Пользователь не найден.",
+                details={"action": "get_user_posts", "user_id": author_id},
+            )
+        return PostRepository.get_by_author_id(db, author_id, skip=skip, limit=limit)
 
     @staticmethod
     def get_by_id(db: Session, post_id: int):
@@ -70,13 +90,13 @@ class PostUseCase:
             )
 
     @staticmethod
-    def upload_image(db, post_id: int, file: UploadFile, current_user_id: int):
-        post = PostRepository.get_by_id(db, post_id)
-        if not post:
-            raise HTTPException(status_code=404, detail="Пост не найден")
-        if post.author_id != current_user_id:
-            raise HTTPException(
-                status_code=403, detail="Нет прав на изменение этого поста"
+    def upload_image(db, post_id: int, file: UploadFile):
+        try:
+            PostRepository.get_by_id(db, post_id)
+        except RecordNotFoundError:
+            raise EntityNotFoundError(
+                message="Пост не найден",
+                details={"action": "upload_image", "post_id": post_id},
             )
         file_extension = file.filename.split(".")[-1]
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
@@ -85,5 +105,19 @@ class PostUseCase:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         image_url = f"/{file_path}"
-        updated_post = PostRepository.update_image(db, post_id, image_url)
-        return updated_post
+        return PostRepository.update_image(db, post_id, image_url)
+
+    @staticmethod
+    def delete_image(db: Session, post_id: int):
+        try:
+            post = PostRepository.get_by_id(db, post_id)
+        except RecordNotFoundError:
+            raise EntityNotFoundError(
+                message="Пост не найден",
+                details={"action": "delete_image", "post_id": post_id},
+            )
+        if post.image:
+            file_path = post.image.lstrip("/")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        return PostRepository.update_image(db, post_id, None)
