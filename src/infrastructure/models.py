@@ -64,7 +64,9 @@ class Post(Base, PublishedCreatedMixin):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(256))
     text = Column(Text)
-    pub_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    pub_date = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     image = Column(String, nullable=True)
 
     author_id = Column(Integer, ForeignKey("users.id"))
@@ -78,6 +80,7 @@ class Post(Base, PublishedCreatedMixin):
         "Comment", back_populates="post", cascade="all, delete-orphan"
     )
     likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
+    author = relationship("User", back_populates="posts", lazy="selectin")
 
 
 class Comment(Base):
@@ -85,13 +88,15 @@ class Comment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     text = Column(Text)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"))
     author_id = Column(Integer, ForeignKey("users.id"))
 
     post = relationship("Post", back_populates="comments")
-    author = relationship("User", back_populates="comments")
+    author = relationship("User", back_populates="comments", lazy="selectin")
     likes = relationship("Like", back_populates="comment", cascade="all, delete-orphan")
 
 

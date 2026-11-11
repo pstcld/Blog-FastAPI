@@ -1,8 +1,8 @@
-"""initial_migration
+"""init
 
-Revision ID: 31c587f2e285
+Revision ID: 0e3d8f60c894
 Revises:
-Create Date: 2026-11-11 22:21:54.685152
+Create Date: 2026-11-12 03:42:58.191807
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "31c587f2e285"
+revision: str = "0e3d8f60c894"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -59,7 +59,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("title", sa.String(length=256), nullable=True),
         sa.Column("text", sa.Text(), nullable=True),
-        sa.Column("pub_date", sa.DateTime(), nullable=True),
+        sa.Column("pub_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("image", sa.String(), nullable=True),
         sa.Column("author_id", sa.Integer(), nullable=True),
         sa.Column("location_id", sa.Integer(), nullable=True),
@@ -85,7 +85,7 @@ def upgrade() -> None:
         "comments",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("text", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("post_id", sa.Integer(), nullable=True),
         sa.Column("author_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(

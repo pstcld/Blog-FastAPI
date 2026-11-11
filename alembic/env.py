@@ -10,13 +10,13 @@ import sys
 
 sys.path.insert(0, os.getcwd())
 
-from src.infrastructure.database import SQLALCHEMY_DATABASE_URL
+from src.core.config import settings
 from src.infrastructure.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.postgres_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

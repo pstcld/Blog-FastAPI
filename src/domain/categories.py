@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import categories as schemas
 from src.infrastructure.repositories import CategoryRepository
 from src.core.exceptions.database_exceptions import (
@@ -13,13 +13,13 @@ from src.core.exceptions.domain_exceptions import (
 
 class CategoryUseCase:
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return CategoryRepository.get_all(db, skip, limit)
+    async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100):
+        return await CategoryRepository.get_all(db, skip, limit)
 
     @staticmethod
-    def get_by_id(db: Session, category_id: int):
+    async def get_by_id(db: AsyncSession, category_id: int):
         try:
-            return CategoryRepository.get_by_id(db, category_id)
+            return await CategoryRepository.get_by_id(db, category_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Категория не найдена.",
@@ -27,9 +27,9 @@ class CategoryUseCase:
             )
 
     @staticmethod
-    def create(db: Session, category: schemas.CategoryCreate):
+    async def create(db: AsyncSession, category: schemas.CategoryCreate):
         try:
-            return CategoryRepository.create(db, category)
+            return await CategoryRepository.create(db, category)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось создать категорию: такой slug уже существует.",
@@ -37,9 +37,11 @@ class CategoryUseCase:
             )
 
     @staticmethod
-    def update(db: Session, category_id: int, category_update: schemas.CategoryUpdate):
+    async def update(
+        db: AsyncSession, category_id: int, category_update: schemas.CategoryUpdate
+    ):
         try:
-            db_category = CategoryRepository.get_by_id(db, category_id)
+            db_category = await CategoryRepository.get_by_id(db, category_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Категория для обновления не найдена.",
@@ -47,7 +49,7 @@ class CategoryUseCase:
             )
 
         try:
-            return CategoryRepository.update(db, db_category, category_update)
+            return await CategoryRepository.update(db, db_category, category_update)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось обновить категорию: slug уже занят.",
@@ -55,10 +57,10 @@ class CategoryUseCase:
             )
 
     @staticmethod
-    def delete(db: Session, category_id: int):
+    async def delete(db: AsyncSession, category_id: int):
         try:
-            db_category = CategoryRepository.get_by_id(db, category_id)
-            CategoryRepository.delete(db, db_category)
+            db_category = await CategoryRepository.get_by_id(db, category_id)
+            await CategoryRepository.delete(db, db_category)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Категория для удаления не найдена.",

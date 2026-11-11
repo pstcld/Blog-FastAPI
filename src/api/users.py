@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from src.infrastructure.database import get_db
 from src.api.dependencies import get_current_user
@@ -19,17 +19,19 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=schemas.UserResponse)
-def get_current_user_profile(
+async def get_current_user_profile(
     current_user: schemas.UserResponse = Depends(get_current_user),
 ):
     return current_user
 
 
 @router.post("/login", response_model=schemas.Token)
-def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
 ):
-    user = UserUseCase.authenticate_user(db, form_data.username, form_data.password)
+    user = await UserUseCase.authenticate_user(
+        db, form_data.username, form_data.password
+    )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -42,14 +44,16 @@ def login_for_access_token(
 
 
 @router.get("/", response_model=List[schemas.UserResponse])
-def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return UserUseCase.get_all(db, skip=skip, limit=limit)
+async def get_users(
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+):
+    return await UserUseCase.get_all(db, skip=skip, limit=limit)
 
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        return UserUseCase.get_by_id(db, user_id)
+        return await UserUseCase.get_by_id(db, user_id)
     except EntityNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -60,9 +64,9 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED
 )
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
     try:
-        return UserUseCase.create(db, user)
+        return await UserUseCase.create(db, user)
     except EntityAlreadyExistsError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -71,11 +75,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}/posts", response_model=List[post_schemas.PostResponse])
-def get_user_posts(
-    user_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+async def get_user_posts(
+    user_id: int, skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
     try:
-        return PostUseCase.get_by_author_id(
+        return await PostUseCase.get_by_author_id(
             db, author_id=user_id, skip=skip, limit=limit
         )
     except EntityNotFoundError as e:
@@ -83,8 +87,8 @@ def get_user_posts(
 
 
 @router.get("/{user_id}/likes/posts", response_model=List[post_schemas.PostResponse])
-def get_user_liked_posts(user_id: int, db: Session = Depends(get_db)):
+async def get_user_liked_posts(user_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        return LikeUseCase.get_user_liked_posts(db, user_id)
+        return await LikeUseCase.get_user_liked_posts(db, user_id)
     except EntityNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

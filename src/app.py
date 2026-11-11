@@ -16,9 +16,11 @@ os.makedirs("static", exist_ok=True)
 app.mount("/media", StaticFiles(directory="media"), name="media")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
 @app.get("/", include_in_schema=False)
 def serve_root():
     return FileResponse("static/index.html")
+
 
 @app.middleware("http")
 async def log_user_actions(request: Request, call_next):

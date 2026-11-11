@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from src.infrastructure.database import get_db
 from src.schemas import locations as schemas
@@ -15,14 +15,16 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[schemas.LocationResponse])
-def get_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return LocationUseCase.get_all(db, skip=skip, limit=limit)
+async def get_locations(
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+):
+    return await LocationUseCase.get_all(db, skip=skip, limit=limit)
 
 
 @router.get("/{location_id}", response_model=schemas.LocationResponse)
-def get_location(location_id: int, db: Session = Depends(get_db)):
+async def get_location(location_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        return LocationUseCase.get_by_id(db, location_id)
+        return await LocationUseCase.get_by_id(db, location_id)
     except EntityNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -33,13 +35,13 @@ def get_location(location_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/", response_model=schemas.LocationResponse, status_code=status.HTTP_201_CREATED
 )
-def create_location(
+async def create_location(
     location: schemas.LocationCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_admin: user_schemas.UserResponse = Depends(get_current_user),
 ):
     try:
-        return LocationUseCase.create(db, location)
+        return await LocationUseCase.create(db, location)
     except EntityAlreadyExistsError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -48,14 +50,14 @@ def create_location(
 
 
 @router.put("/{location_id}", response_model=schemas.LocationResponse)
-def update_location(
+async def update_location(
     location_id: int,
     location_update: schemas.LocationUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_admin: user_schemas.UserResponse = Depends(get_current_admin_user),
 ):
     try:
-        return LocationUseCase.update(db, location_id, location_update)
+        return await LocationUseCase.update(db, location_id, location_update)
     except EntityNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -69,13 +71,13 @@ def update_location(
 
 
 @router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_location(
+async def delete_location(
     location_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_admin: user_schemas.UserResponse = Depends(get_current_admin_user),
 ):
     try:
-        LocationUseCase.delete(db, location_id)
+        await LocationUseCase.delete(db, location_id)
     except EntityNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

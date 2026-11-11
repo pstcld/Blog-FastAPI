@@ -1,4 +1,8 @@
-from sqlalchemy.orm import Session
+import os
+import uuid
+from typing import Optional
+from fastapi import UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import posts as schemas
 from src.infrastructure.repositories import PostRepository, UserRepository
 from src.core.exceptions.database_exceptions import (
@@ -9,41 +13,40 @@ from src.core.exceptions.domain_exceptions import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
 )
-import os
-import shutil
-import uuid
-from fastapi import UploadFile
-from typing import Optional
 
 
 class PostUseCase:
     @staticmethod
-    def get_all(
-        db: Session,
+    async def get_all(
+        db: AsyncSession,
         skip: int = 0,
         limit: int = 100,
         category_id: Optional[int] = None,
         location_id: Optional[int] = None,
     ):
-        return PostRepository.get_all(
+        return await PostRepository.get_all(
             db, skip=skip, limit=limit, category_id=category_id, location_id=location_id
         )
 
     @staticmethod
-    def get_by_author_id(db: Session, author_id: int, skip: int = 0, limit: int = 100):
+    async def get_by_author_id(
+        db: AsyncSession, author_id: int, skip: int = 0, limit: int = 100
+    ):
         try:
-            UserRepository.get_by_id(db, author_id)
+            await UserRepository.get_by_id(db, author_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Пользователь не найден.",
                 details={"action": "get_user_posts", "user_id": author_id},
             )
-        return PostRepository.get_by_author_id(db, author_id, skip=skip, limit=limit)
+        return await PostRepository.get_by_author_id(
+            db, author_id, skip=skip, limit=limit
+        )
 
     @staticmethod
-    def get_by_id(db: Session, post_id: int):
+    async def get_by_id(db: AsyncSession, post_id: int):
         try:
-            return PostRepository.get_by_id(db, post_id)
+            return await PostRepository.get_by_id(db, post_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Публикация не найдена.",
@@ -51,9 +54,9 @@ class PostUseCase:
             )
 
     @staticmethod
-    def create(db: Session, post: schemas.PostCreate):
+    async def create(db: AsyncSession, post: schemas.PostCreate):
         try:
-            return PostRepository.create(db, post)
+            return await PostRepository.create(db, post)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось создать публикацию.",
@@ -61,9 +64,9 @@ class PostUseCase:
             )
 
     @staticmethod
-    def update(db: Session, post_id: int, post_update: schemas.PostUpdate):
+    async def update(db: AsyncSession, post_id: int, post_update: schemas.PostUpdate):
         try:
-            db_post = PostRepository.get_by_id(db, post_id)
+            db_post = await PostRepository.get_by_id(db, post_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Публикация для обновления не найдена.",
@@ -71,7 +74,7 @@ class PostUseCase:
             )
 
         try:
-            return PostRepository.update(db, db_post, post_update)
+            return await PostRepository.update(db, db_post, post_update)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось обновить публикацию.",
@@ -79,10 +82,10 @@ class PostUseCase:
             )
 
     @staticmethod
-    def delete(db: Session, post_id: int):
+    async def delete(db: AsyncSession, post_id: int):
         try:
-            db_post = PostRepository.get_by_id(db, post_id)
-            PostRepository.delete(db, db_post)
+            db_post = await PostRepository.get_by_id(db, post_id)
+            await PostRepository.delete(db, db_post)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Публикация для удаления не найдена.",
@@ -90,9 +93,9 @@ class PostUseCase:
             )
 
     @staticmethod
-    def upload_image(db, post_id: int, file: UploadFile):
+    async def upload_image(db: AsyncSession, post_id: int, file: UploadFile):
         try:
-            PostRepository.get_by_id(db, post_id)
+            await PostRepository.get_by_id(db, post_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Пост не найден",
@@ -102,15 +105,18 @@ class PostUseCase:
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
         file_path = f"media/{unique_filename}"
         os.makedirs("media", exist_ok=True)
+
+        content = await file.read()
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            buffer.write(content)
+
         image_url = f"/{file_path}"
-        return PostRepository.update_image(db, post_id, image_url)
+        return await PostRepository.update_image(db, post_id, image_url)
 
     @staticmethod
-    def delete_image(db: Session, post_id: int):
+    async def delete_image(db: AsyncSession, post_id: int):
         try:
-            post = PostRepository.get_by_id(db, post_id)
+            post = await PostRepository.get_by_id(db, post_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Пост не найден",
@@ -120,4 +126,4 @@ class PostUseCase:
             file_path = post.image.lstrip("/")
             if os.path.exists(file_path):
                 os.remove(file_path)
-        return PostRepository.update_image(db, post_id, None)
+        return await PostRepository.update_image(db, post_id, None)

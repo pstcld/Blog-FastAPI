@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import users as schemas
 from src.infrastructure.repositories import UserRepository
 from src.core.security import get_password_hash, verify_password
@@ -14,13 +14,13 @@ from src.core.exceptions.domain_exceptions import (
 
 class UserUseCase:
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return UserRepository.get_all(db, skip, limit)
+    async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100):
+        return await UserRepository.get_all(db, skip, limit)
 
     @staticmethod
-    def get_by_id(db: Session, user_id: int):
+    async def get_by_id(db: AsyncSession, user_id: int):
         try:
-            return UserRepository.get_by_id(db, user_id)
+            return await UserRepository.get_by_id(db, user_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Пользователь не найден.",
@@ -28,9 +28,9 @@ class UserUseCase:
             )
 
     @staticmethod
-    def get_by_username(db: Session, username: str):
+    async def get_by_username(db: AsyncSession, username: str):
         try:
-            return UserRepository.get_by_username(db, username)
+            return await UserRepository.get_by_username(db, username)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Пользователь с таким именем не найден.",
@@ -38,7 +38,7 @@ class UserUseCase:
             )
 
     @staticmethod
-    def create(db: Session, user: schemas.UserCreate):
+    async def create(db: AsyncSession, user: schemas.UserCreate):
         hashed_pw = get_password_hash(user.password)
 
         user_db_data = schemas.UserCreateDB(
@@ -49,16 +49,7 @@ class UserUseCase:
         )
 
         try:
-            return UserRepository.create(db, user_db_data)
-        except RecordAlreadyExistsError:
-            raise EntityAlreadyExistsError(
-                message="Пользователь с таким именем или email уже существует.",
-                details={
-                    "action": "create_user",
-                    "username": user.username,
-                    "email": user.email,
-                },
-            )
+            return await UserRepository.create(db, user_db_data)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Пользователь с таким именем или email уже существует.",
@@ -70,9 +61,9 @@ class UserUseCase:
             )
 
     @staticmethod
-    def authenticate_user(db: Session, username: str, password: str):
+    async def authenticate_user(db: AsyncSession, username: str, password: str):
         try:
-            user = UserRepository.get_by_username(db, username)
+            user = await UserRepository.get_by_username(db, username)
         except RecordNotFoundError:
             return None
 

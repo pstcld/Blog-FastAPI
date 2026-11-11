@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import locations as schemas
 from src.infrastructure.repositories import LocationRepository
 from src.core.exceptions.database_exceptions import (
@@ -13,13 +13,13 @@ from src.core.exceptions.domain_exceptions import (
 
 class LocationUseCase:
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return LocationRepository.get_all(db, skip, limit)
+    async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100):
+        return await LocationRepository.get_all(db, skip, limit)
 
     @staticmethod
-    def get_by_id(db: Session, location_id: int):
+    async def get_by_id(db: AsyncSession, location_id: int):
         try:
-            return LocationRepository.get_by_id(db, location_id)
+            return await LocationRepository.get_by_id(db, location_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Локация не найдена.",
@@ -27,9 +27,9 @@ class LocationUseCase:
             )
 
     @staticmethod
-    def create(db: Session, location: schemas.LocationCreate):
+    async def create(db: AsyncSession, location: schemas.LocationCreate):
         try:
-            return LocationRepository.create(db, location)
+            return await LocationRepository.create(db, location)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось добавить локацию: конфликт уникальных данных.",
@@ -37,9 +37,11 @@ class LocationUseCase:
             )
 
     @staticmethod
-    def update(db: Session, location_id: int, location_update: schemas.LocationUpdate):
+    async def update(
+        db: AsyncSession, location_id: int, location_update: schemas.LocationUpdate
+    ):
         try:
-            db_location = LocationRepository.get_by_id(db, location_id)
+            db_location = await LocationRepository.get_by_id(db, location_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Локация для обновления не найдена.",
@@ -47,7 +49,7 @@ class LocationUseCase:
             )
 
         try:
-            return LocationRepository.update(db, db_location, location_update)
+            return await LocationRepository.update(db, db_location, location_update)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось обновить локацию: конфликт уникальных данных.",
@@ -55,10 +57,10 @@ class LocationUseCase:
             )
 
     @staticmethod
-    def delete(db: Session, location_id: int):
+    async def delete(db: AsyncSession, location_id: int):
         try:
-            db_location = LocationRepository.get_by_id(db, location_id)
-            LocationRepository.delete(db, db_location)
+            db_location = await LocationRepository.get_by_id(db, location_id)
+            await LocationRepository.delete(db, db_location)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Локация для удаления не найдена.",

@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import comments as schemas
 from src.infrastructure.repositories import CommentRepository
 from src.core.exceptions.database_exceptions import (
@@ -13,13 +13,13 @@ from src.core.exceptions.domain_exceptions import (
 
 class CommentUseCase:
     @staticmethod
-    def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return CommentRepository.get_all(db, skip, limit)
+    async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100):
+        return await CommentRepository.get_all(db, skip, limit)
 
     @staticmethod
-    def get_by_id(db: Session, comment_id: int):
+    async def get_by_id(db: AsyncSession, comment_id: int):
         try:
-            return CommentRepository.get_by_id(db, comment_id)
+            return await CommentRepository.get_by_id(db, comment_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Комментарий не найден.",
@@ -27,13 +27,15 @@ class CommentUseCase:
             )
 
     @staticmethod
-    def get_by_post_id(db: Session, post_id: int, skip: int = 0, limit: int = 100):
-        return CommentRepository.get_by_post_id(db, post_id, skip, limit)
+    async def get_by_post_id(
+        db: AsyncSession, post_id: int, skip: int = 0, limit: int = 100
+    ):
+        return await CommentRepository.get_by_post_id(db, post_id, skip, limit)
 
     @staticmethod
-    def create(db: Session, comment: schemas.CommentCreate):
+    async def create(db: AsyncSession, comment: schemas.CommentCreate):
         try:
-            return CommentRepository.create(db, comment)
+            return await CommentRepository.create(db, comment)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось добавить комментарий.",
@@ -41,9 +43,11 @@ class CommentUseCase:
             )
 
     @staticmethod
-    def update(db: Session, comment_id: int, comment_update: schemas.CommentUpdate):
+    async def update(
+        db: AsyncSession, comment_id: int, comment_update: schemas.CommentUpdate
+    ):
         try:
-            db_comment = CommentRepository.get_by_id(db, comment_id)
+            db_comment = await CommentRepository.get_by_id(db, comment_id)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Комментарий для обновления не найден.",
@@ -51,7 +55,7 @@ class CommentUseCase:
             )
 
         try:
-            return CommentRepository.update(db, db_comment, comment_update)
+            return await CommentRepository.update(db, db_comment, comment_update)
         except RecordAlreadyExistsError:
             raise EntityAlreadyExistsError(
                 message="Не удалось обновить комментарий.",
@@ -59,10 +63,10 @@ class CommentUseCase:
             )
 
     @staticmethod
-    def delete(db: Session, comment_id: int):
+    async def delete(db: AsyncSession, comment_id: int):
         try:
-            db_comment = CommentRepository.get_by_id(db, comment_id)
-            CommentRepository.delete(db, db_comment)
+            db_comment = await CommentRepository.get_by_id(db, comment_id)
+            await CommentRepository.delete(db, db_comment)
         except RecordNotFoundError:
             raise EntityNotFoundError(
                 message="Комментарий для удаления не найден.",

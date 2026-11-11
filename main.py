@@ -1,9 +1,10 @@
+import asyncio
 import uvicorn
 from src.core.init_db import create_default_admin
 
 if __name__ == "__main__":
     try:
-        create_default_admin()
+        asyncio.run(create_default_admin())
     except Exception as e:
         print(f"Ошибка при инициализации БД: {e}")
 
